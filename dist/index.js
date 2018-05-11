@@ -87,6 +87,8 @@ var toConsumableArray = function (arr) {
   }
 };
 
+function emptyFunc() {}
+
 var nameHash = {};
 
 function Data$1(name, defaultData) {
@@ -96,30 +98,27 @@ function Data$1(name, defaultData) {
     if (nameHash[name]) {
         console.warn('duplicate name \'' + name + '\' when new Data. please consider change a name;');
     }
-    nameHash[name] = {};
+    nameHash[name] = this;
+    this._hookListeners = {};
     this._eventCache = {};
     this._reducerArr = [];
     this.name = name;
     this.defaultData = defaultData;
+    if (Data$1._task.length) {
+        Data$1._task = Data$1._task.filter(function (_) {
+            return !_();
+        });
+    }
 }
-
-function emptyFunc() {}
-
-Data$1.prototype.asifReducer = function () {
-    var _this = this;
-
-    var self = this;
-    var reducer = function reducer(state, action) {
-        return _this._reducer(state, action);
-    };
-    reducer.dispatch = dispatchFunc.bind(this);
-    reducer._data = this;
-    return reducer;
+Data$1._task = [];
+Data$1._getStore = function (name) {
+    return nameHash[name];
 };
-Data$1.prototype.getDispath = function (methodName) {
+
+Data$1.prototype.getDispath = function (eventName) {
     if (this.storeDispatch) return this.storeDispatch;
     if (!this.globaleStore) {
-        console.error('call ' + this.name + '.' + methodName + ' error. maybe you don\'t specified the \'getStore\' when init, check it.');
+        console.error('call ' + this.name + '.dispatch(\'' + eventName + '\') error. maybe you don\'t specified the \'getStore\' when init, check it.');
         return emptyFunc;
     }
     this.storeDispatch = this.globaleStore().dispatch;
@@ -132,10 +131,7 @@ Data$1.prototype.event = function (eventName, config) {
         console.warn('add event `' + eventName + '` already exist, ignore*****');
         return this;
     }
-    if (!config.action && !config.reducer) {
-        console.warn('the second parameter of event must have `action` or `reducer` property at least. please check it. this methoddefine is useless. but we\'ll define it still.');
-        return this;
-    }
+    config = config || {};
     var actionGen = config.action;
     var reducerMap = config.reducer;
 
@@ -151,8 +147,7 @@ Data$1.prototype.event = function (eventName, config) {
     this._eventCache[eventName] = _action;
     return this;
 };
-
-Data$1.prototype.dispatch = function dispatchFunc(eventName) {
+function dispatchFunc(eventName) {
     var _action = this._eventCache[eventName];
     if (!_action) {
         console.warn('no function listen event:: ' + eventName);
@@ -164,6 +159,18 @@ Data$1.prototype.dispatch = function dispatchFunc(eventName) {
     }
 
     return this.getDispath(eventName)(_action.apply(null, rest));
+}
+Data$1.prototype.dispatch = dispatchFunc;
+Data$1.prototype.asifReducer = function () {
+    var _this = this;
+
+    var self = this;
+    var reducer = function reducer(state, action) {
+        return _this._reducer(state, action);
+    };
+    reducer.dispatch = dispatchFunc.bind(this);
+    reducer._data = this;
+    return reducer;
 };
 /**
  * 这个主要是考虑到其他Data发出的action也可能改变另一个Data，所以还是用原始的reducer来实现
@@ -174,12 +181,32 @@ Data$1.prototype.addReducer = function (actionType, reducerFunc) {
 };
 
 Data$1.prototype.external = function (type, reducerFunc) {
+    var _this2 = this;
+
+    var otherStoreName = type.split('.')[0];
+    if (otherStoreName) {
+        var task = function task() {
+            var otherStore = Data$1._getStore(otherStoreName);
+            if (otherStore) {
+                !otherStore._hookListeners[type] && (otherStore._hookListeners[type] = []);
+                otherStore._hookListeners[type].push(function (_) {
+                    return _this2.getDispath(type);
+                });
+                return true;
+            } else {
+                return false;
+            }
+        };
+        if (!task()) {
+            Data$1._task.push(task);
+        }
+    }
     this._reducerArr.push(defineProperty({}, type, reducerFunc));
     return this;
 };
 
 Data$1.prototype.getActionType = function (eventName) {
-    return this.name + '.' + methodName;
+    return this.name + '.' + eventName;
 };
 
 Data$1.prototype.init = function (getStore) {
