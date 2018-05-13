@@ -2,8 +2,38 @@ import { reducerGen } from './reducerGen'
 
 function iden(_) { return _; }
 function emptyFunc() { }
-
+// global data hash
 let nameHash = {}
+// global setTimeout timer that check listen event is correct.
+let checkTimer = null;
+
+function checkListen(){
+    if(Data._task.length){
+        Data._task.forEach(task=>{
+            console.warn(`NO_SUCH_DATA::: '${task.from}' listenOther an event that called '${task.type}', but there is no '${task.to}', please check it!!!!!`)
+        })
+    }
+    Object.keys(nameHash).forEach(key=>{
+        let data = nameHash[key]
+        let _hookListeners = data._hookListeners;
+        if(!_hookListeners) return;
+        Object.keys(_hookListeners).forEach(hookName=>{
+            let actionType = hookName.split('.')[1];
+            if(!isExistEvent(data, hookName, actionType)){
+                let from = _hookListeners[hookName].from;
+                console.warn(`NO_SUCH_EVENT::: '${from}' listenOther an event that called '${hookName}', but there is no '${actionType}' event under '${data.name}', please check it!!!!`)
+            }
+        })
+    })
+}
+
+function isExistEvent(data, hookName, actionType){
+    if(data._eventCache[actionType]) return true;
+    if(Object.keys(data._reducerArr).some(key=>key==hookName)) return true;
+    return false;
+}
+
+
 
 function Data(name, defaultData) {
     if (!name) {
@@ -15,11 +45,18 @@ function Data(name, defaultData) {
     nameHash[name] = this;
     this._hookListeners = {};
     this._eventCache = {};
-    this._reducerArr = [];
     this.name = name;
     this.defaultData = defaultData
+    // there is a __reset reducer that clear the data.
+    this._reducerArr = [{
+        [this.getActionType('__reset')]: (state)=>defaultData
+    }];
     if(Data._task.length){
         Data._task = Data._task.filter(_=>(!_()))
+    }
+    if(Data.staticCheckUselessListen===true){
+        clearTimeout(checkTimer)
+        setTimeout(checkListen, 10000)   // ten second.
     }
 }
 Data._task = [];
@@ -27,7 +64,7 @@ Data._getStore = (name) => {
     return nameHash[name]
 }
 
-Data.prototype.getDispath = function (eventName) {
+Data.prototype.getDispatch = function (eventName) {
     if (this.storeDispatch) return this.storeDispatch;
     if (!this.globaleStore) {
         console.error(`call ${this.name}.dispatch('${eventName}') error. maybe you don't specified the 'getStore' when init, check it.`);
@@ -37,7 +74,7 @@ Data.prototype.getDispath = function (eventName) {
     return this.storeDispatch;
 }
 
-Data.prototype.event = function (eventName, config) {
+Data.prototype.listen = function (eventName, config) {
     let self = this;
     if (this._eventCache[eventName]) {
         console.warn('add event `' + eventName + '` already exist, ignore*****');
@@ -46,8 +83,6 @@ Data.prototype.event = function (eventName, config) {
     config = config || {};
     let actionGen = config.action;
     let reducerMap = config.reducer;
-
-
 
     const ACTION_TYPE = this.getActionType(eventName);
     // create the real action
@@ -65,18 +100,23 @@ function dispatchFunc(eventName, ...rest) {
         console.warn('no function listen event:: ' + eventName)
         return;
     }
-    return this.getDispath(eventName)(_action.apply(null, rest));
+    return this.getDispatch(eventName)(_action.apply(null, rest));
 }
 Data.prototype.dispatch = dispatchFunc
+function resetFunc(){
+    return this.getDispatch('__reset')({type: this.getActionType('__reset')})
+}
+Data.prototype.reset = resetFunc
 Data.prototype.asifReducer = function () {
     let self = this;
-    let reducer = (state, action) => {
-        return this._reducer(state, action)
-    }
+    let reducer = (state, action)=>this._reducer(state, action)
     reducer.dispatch = dispatchFunc.bind(this)
+    reducer.reset = resetFunc.bind(this)
     reducer._data = this;
     return reducer;
 }
+
+
 /**
  * 这个主要是考虑到其他Data发出的action也可能改变另一个Data，所以还是用原始的reducer来实现
  */
@@ -88,19 +128,25 @@ Data.prototype.addReducer = function (actionType, reducerFunc) {
 }
 
 
-Data.prototype.external = function (type, reducerFunc) {
+Data.prototype.listenOther = function (type, reducerFunc) {
     let otherStoreName = type.split('.')[0]
     if (otherStoreName) {
         const task = () => {
             let otherStore = Data._getStore(otherStoreName)
             if(otherStore){
                 !otherStore._hookListeners[type] && (otherStore._hookListeners[type] = [])
-                otherStore._hookListeners[type].push(_=>this.getDispath(type))
+                otherStore._hookListeners[type].push({
+                    getDispatch:_=>this.getDispatch(type),
+                    from: this.name,
+                })
                 return true;
             }else{
                 return false;
             }
         }
+        task.from = this.name;
+        task.to = otherStoreName;
+        task.type = type;
         if (!task()) {
             Data._task.push(task)
         }

@@ -88,8 +88,38 @@ var toConsumableArray = function (arr) {
 };
 
 function emptyFunc() {}
-
+// global data hash
 var nameHash = {};
+// global setTimeout timer that check listen event is correct.
+var checkTimer = null;
+
+function checkListen() {
+    if (Data$1._task.length) {
+        Data$1._task.forEach(function (task) {
+            console.warn('NO_SUCH_DATA::: \'' + task.from + '\' listenOther an event that called \'' + task.type + '\', but there is no \'' + task.to + '\', please check it!!!!!');
+        });
+    }
+    Object.keys(nameHash).forEach(function (key) {
+        var data = nameHash[key];
+        var _hookListeners = data._hookListeners;
+        if (!_hookListeners) return;
+        Object.keys(_hookListeners).forEach(function (hookName) {
+            var actionType = hookName.split('.')[1];
+            if (!isExistEvent(data, hookName, actionType)) {
+                var from = _hookListeners[hookName].from;
+                console.warn('NO_SUCH_EVENT::: \'' + from + '\' listenOther an event that called \'' + hookName + '\', but there is no \'' + actionType + '\' event under \'' + data.name + '\', please check it!!!!');
+            }
+        });
+    });
+}
+
+function isExistEvent(data, hookName, actionType) {
+    if (data._eventCache[actionType]) return true;
+    if (Object.keys(data._reducerArr).some(function (key) {
+        return key == hookName;
+    })) return true;
+    return false;
+}
 
 function Data$1(name, defaultData) {
     if (!name) {
@@ -101,13 +131,20 @@ function Data$1(name, defaultData) {
     nameHash[name] = this;
     this._hookListeners = {};
     this._eventCache = {};
-    this._reducerArr = [];
     this.name = name;
     this.defaultData = defaultData;
+    // there is a __reset reducer that clear the data.
+    this._reducerArr = [defineProperty({}, this.getActionType('__reset'), function (state) {
+        return defaultData;
+    })];
     if (Data$1._task.length) {
         Data$1._task = Data$1._task.filter(function (_) {
             return !_();
         });
+    }
+    if (Data$1.staticCheckUselessListen === true) {
+        clearTimeout(checkTimer);
+        setTimeout(checkListen, 10000); // ten second.
     }
 }
 Data$1._task = [];
@@ -125,7 +162,7 @@ Data$1.prototype.getDispath = function (eventName) {
     return this.storeDispatch;
 };
 
-Data$1.prototype.event = function (eventName, config) {
+Data$1.prototype.listen = function (eventName, config) {
     var self = this;
     if (this._eventCache[eventName]) {
         console.warn('add event `' + eventName + '` already exist, ignore*****');
@@ -161,6 +198,10 @@ function dispatchFunc(eventName) {
     return this.getDispath(eventName)(_action.apply(null, rest));
 }
 Data$1.prototype.dispatch = dispatchFunc;
+function resetFunc() {
+    return this.getDispath('__reset')({ type: this.getActionType('__reset') });
+}
+Data$1.prototype.reset = resetFunc;
 Data$1.prototype.asifReducer = function () {
     var _this = this;
 
@@ -169,9 +210,11 @@ Data$1.prototype.asifReducer = function () {
         return _this._reducer(state, action);
     };
     reducer.dispatch = dispatchFunc.bind(this);
+    reducer.reset = resetFunc.bind(this);
     reducer._data = this;
     return reducer;
 };
+
 /**
  * 这个主要是考虑到其他Data发出的action也可能改变另一个Data，所以还是用原始的reducer来实现
  */
@@ -180,7 +223,7 @@ Data$1.prototype.addReducer = function (actionType, reducerFunc) {
     return this;
 };
 
-Data$1.prototype.external = function (type, reducerFunc) {
+Data$1.prototype.listenOther = function (type, reducerFunc) {
     var _this2 = this;
 
     var otherStoreName = type.split('.')[0];
@@ -189,14 +232,20 @@ Data$1.prototype.external = function (type, reducerFunc) {
             var otherStore = Data$1._getStore(otherStoreName);
             if (otherStore) {
                 !otherStore._hookListeners[type] && (otherStore._hookListeners[type] = []);
-                otherStore._hookListeners[type].push(function (_) {
-                    return _this2.getDispath(type);
+                otherStore._hookListeners[type].push({
+                    getDispatch: function getDispatch(_) {
+                        return _this2.getDispatch(type);
+                    },
+                    from: _this2.name
                 });
                 return true;
             } else {
                 return false;
             }
         };
+        task.from = this.name;
+        task.to = otherStoreName;
+        task.type = type;
         if (!task()) {
             Data$1._task.push(task);
         }
