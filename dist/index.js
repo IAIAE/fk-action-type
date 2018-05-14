@@ -94,6 +94,7 @@ var nameHash = {};
 var checkTimer = null;
 
 function checkListen() {
+    if (Data$1._staticCheckUselessListen !== true) return;
     if (Data$1._task.length) {
         Data$1._task.forEach(function (task) {
             console.warn('NO_SUCH_DATA::: \'' + task.from + '\' listenOther an event that called \'' + task.type + '\', but there is no \'' + task.to + '\', please check it!!!!!');
@@ -106,8 +107,9 @@ function checkListen() {
         Object.keys(_hookListeners).forEach(function (hookName) {
             var actionType = hookName.split('.')[1];
             if (!isExistEvent(data, hookName, actionType)) {
-                var from = _hookListeners[hookName].from;
-                console.warn('NO_SUCH_EVENT::: \'' + from + '\' listenOther an event that called \'' + hookName + '\', but there is no \'' + actionType + '\' event under \'' + data.name + '\', please check it!!!!');
+                _hookListeners[hookName].forEach(function (listener) {
+                    console.warn('NO_SUCH_EVENT::: \'' + listener.from + '\' listenOther an event that called \'' + hookName + '\', but there is no \'' + actionType + '\' event under \'' + data.name + '\', please check it!!!!');
+                });
             }
         });
     });
@@ -115,8 +117,10 @@ function checkListen() {
 
 function isExistEvent(data, hookName, actionType) {
     if (data._eventCache[actionType]) return true;
-    if (Object.keys(data._reducerArr).some(function (key) {
-        return key == hookName;
+    if (data._reducerArr.some(function (obj) {
+        return Object.keys(obj).some(function (key) {
+            return key == hookName;
+        });
     })) return true;
     return false;
 }
@@ -142,17 +146,18 @@ function Data$1(name, defaultData) {
             return !_();
         });
     }
-    if (Data$1.staticCheckUselessListen === true) {
-        clearTimeout(checkTimer);
-        setTimeout(checkListen, 10000); // ten second.
-    }
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(checkListen, 8000); // ten second.
 }
 Data$1._task = [];
 Data$1._getStore = function (name) {
     return nameHash[name];
 };
+Data$1.staticCheck = function (value) {
+    Data$1._staticCheckUselessListen = value;
+};
 
-Data$1.prototype.getDispath = function (eventName) {
+Data$1.prototype.getDispatch = function (eventName) {
     if (this.storeDispatch) return this.storeDispatch;
     if (!this.globaleStore) {
         console.error('call ' + this.name + '.dispatch(\'' + eventName + '\') error. maybe you don\'t specified the \'getStore\' when init, check it.');
@@ -195,11 +200,11 @@ function dispatchFunc(eventName) {
         rest[_key - 1] = arguments[_key];
     }
 
-    return this.getDispath(eventName)(_action.apply(null, rest));
+    return this.getDispatch(eventName)(_action.apply(null, rest));
 }
 Data$1.prototype.dispatch = dispatchFunc;
 function resetFunc() {
-    return this.getDispath('__reset')({ type: this.getActionType('__reset') });
+    return this.getDispatch('__reset')({ type: this.getActionType('__reset') });
 }
 Data$1.prototype.reset = resetFunc;
 Data$1.prototype.asifReducer = function () {

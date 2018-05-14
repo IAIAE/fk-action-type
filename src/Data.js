@@ -8,6 +8,7 @@ let nameHash = {}
 let checkTimer = null;
 
 function checkListen(){
+    if(Data._staticCheckUselessListen!==true) return;
     if(Data._task.length){
         Data._task.forEach(task=>{
             console.warn(`NO_SUCH_DATA::: '${task.from}' listenOther an event that called '${task.type}', but there is no '${task.to}', please check it!!!!!`)
@@ -20,8 +21,9 @@ function checkListen(){
         Object.keys(_hookListeners).forEach(hookName=>{
             let actionType = hookName.split('.')[1];
             if(!isExistEvent(data, hookName, actionType)){
-                let from = _hookListeners[hookName].from;
-                console.warn(`NO_SUCH_EVENT::: '${from}' listenOther an event that called '${hookName}', but there is no '${actionType}' event under '${data.name}', please check it!!!!`)
+                _hookListeners[hookName].forEach(listener=>{
+                    console.warn(`NO_SUCH_EVENT::: '${listener.from}' listenOther an event that called '${hookName}', but there is no '${actionType}' event under '${data.name}', please check it!!!!`)
+                })
             }
         })
     })
@@ -29,7 +31,7 @@ function checkListen(){
 
 function isExistEvent(data, hookName, actionType){
     if(data._eventCache[actionType]) return true;
-    if(Object.keys(data._reducerArr).some(key=>key==hookName)) return true;
+    if(data._reducerArr.some(obj=>Object.keys(obj).some(key=>key==hookName))) return true;
     return false;
 }
 
@@ -54,14 +56,15 @@ function Data(name, defaultData) {
     if(Data._task.length){
         Data._task = Data._task.filter(_=>(!_()))
     }
-    if(Data.staticCheckUselessListen===true){
-        clearTimeout(checkTimer)
-        setTimeout(checkListen, 10000)   // ten second.
-    }
+    clearTimeout(checkTimer)
+    checkTimer = setTimeout(checkListen, 8000)   // ten second.
 }
 Data._task = [];
 Data._getStore = (name) => {
     return nameHash[name]
+}
+Data.staticCheck = function(value){
+    Data._staticCheckUselessListen = value;
 }
 
 Data.prototype.getDispatch = function (eventName) {
