@@ -1,17 +1,19 @@
 {
   "name": "fk-action-type",
-  "version": "0.1.0",
+  "version": "0.2.9",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {},
   "devDependencies": {
-    "babelrc-rollup": "^3.0.0",
     "babel-cli": "^6.22.2",
     "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.22.0",
     "babel-preset-es2015": "^6.24.1",
+    "babelrc-rollup": "^3.0.0",
     "rollup": "^0.41.1",
-    "rollup-plugin-babel": "^3.0.1"
+    "rollup-plugin-babel": "^3.0.1",
+    "rollup-plugin-typescript": "^0.8.1"
   },
   "scripts": {
     "build": "rollup -c"
@@ -28,6 +30,7 @@
   ],
   "author": "IAIAE",
   "license": "MIT",
+  "typings": "types/fk.d.ts",
   "bugs": {
     "url": "https://github.com/IAIAE/fk-action-type/issues"
   },

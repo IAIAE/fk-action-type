@@ -28,6 +28,34 @@ function reducerGen(config, defaultStatus) {
     };
 }
 
+var classCallCheck = function (instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+};
+
+var createClass = function () {
+  function defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }
+
+  return function (Constructor, protoProps, staticProps) {
+    if (protoProps) defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) defineProperties(Constructor, staticProps);
+    return Constructor;
+  };
+}();
+
+
+
+
+
 var defineProperty = function (obj, key, value) {
   if (key in obj) {
     Object.defineProperty(obj, key, {
@@ -124,71 +152,6 @@ function isExistEvent(data, hookName, actionType) {
     })) return true;
     return false;
 }
-
-function Data$1(name, defaultData) {
-    if (!name) {
-        throw new Error('a Data must has a name, please use `new Data(\'name\')`');
-    }
-    if (nameHash[name]) {
-        console.warn('duplicate name \'' + name + '\' when new Data. please consider change a name;');
-    }
-    nameHash[name] = this;
-    this._hookListeners = {};
-    this._eventCache = {};
-    this.name = name;
-    this.defaultData = defaultData;
-    // there is a __reset reducer that clear the data.
-    this._reducerArr = [defineProperty({}, this.getActionType('__reset'), function (state) {
-        return defaultData;
-    })];
-    if (Data$1._task.length) {
-        Data$1._task = Data$1._task.filter(function (_) {
-            return !_();
-        });
-    }
-    clearTimeout(checkTimer);
-    checkTimer = setTimeout(checkListen, 8000); // ten second.
-}
-Data$1._task = [];
-Data$1._getStore = function (name) {
-    return nameHash[name];
-};
-Data$1.staticCheck = function (value) {
-    Data$1._staticCheckUselessListen = value;
-};
-
-Data$1.prototype.getDispatch = function (eventName) {
-    if (this.storeDispatch) return this.storeDispatch;
-    if (!this.globaleStore) {
-        console.error('call ' + this.name + '.dispatch(\'' + eventName + '\') error. maybe you don\'t specified the \'getStore\' when init, check it.');
-        return emptyFunc;
-    }
-    this.storeDispatch = this.globaleStore().dispatch;
-    return this.storeDispatch;
-};
-
-Data$1.prototype.listen = function (eventName, config) {
-    var self = this;
-    if (this._eventCache[eventName]) {
-        console.warn('add event `' + eventName + '` already exist, ignore*****');
-        return this;
-    }
-    config = config || {};
-    var actionGen = config.action;
-    var reducerMap = config.reducer;
-
-    var ACTION_TYPE = this.getActionType(eventName);
-    // create the real action
-    var _action = actionGen ? actionGen(ACTION_TYPE) : function (data) {
-        return { type: ACTION_TYPE, data: data };
-    };
-
-    // create the real reducer. if config.reducer is undefined, means this action will not change the state, so reducer is needless.
-    reducerMap && this._reducerArr.push(reducerMap(ACTION_TYPE));
-
-    this._eventCache[eventName] = _action;
-    return this;
-};
 function dispatchFunc(eventName) {
     var _action = this._eventCache[eventName];
     if (!_action) {
@@ -202,76 +165,165 @@ function dispatchFunc(eventName) {
 
     return this.getDispatch(eventName)(_action.apply(null, rest));
 }
-Data$1.prototype.dispatch = dispatchFunc;
 function resetFunc() {
     return this.getDispatch('__reset')({ type: this.getActionType('__reset') });
 }
-Data$1.prototype.reset = resetFunc;
-Data$1.prototype.asifReducer = function () {
-    var _this = this;
 
-    var self = this;
-    var reducer = function reducer(state, action) {
-        return _this._reducer(state, action);
-    };
-    reducer.dispatch = dispatchFunc.bind(this);
-    reducer.reset = resetFunc.bind(this);
-    reducer._data = this;
-    return reducer;
-};
+var Data$1 = function () {
+    function Data(name, defaultData) {
+        classCallCheck(this, Data);
 
-/**
- * 这个主要是考虑到其他Data发出的action也可能改变另一个Data，所以还是用原始的reducer来实现
- */
-Data$1.prototype.addReducer = function (actionType, reducerFunc) {
-    this._reducerArr.push(defineProperty({}, actionType, reducerFunc));
-    return this;
-};
+        _initialiseProps.call(this);
 
-Data$1.prototype.listenOther = function (type, reducerFunc) {
-    var _this2 = this;
-
-    var otherStoreName = type.split('.')[0];
-    if (otherStoreName) {
-        var task = function task() {
-            var otherStore = Data$1._getStore(otherStoreName);
-            if (otherStore) {
-                !otherStore._hookListeners[type] && (otherStore._hookListeners[type] = []);
-                otherStore._hookListeners[type].push({
-                    getDispatch: function getDispatch(_) {
-                        return _this2.getDispatch(type);
-                    },
-                    from: _this2.name
-                });
-                return true;
-            } else {
-                return false;
-            }
-        };
-        task.from = this.name;
-        task.to = otherStoreName;
-        task.type = type;
-        if (!task()) {
-            Data$1._task.push(task);
+        if (!name) {
+            throw new Error('a Data must has a name, please use `new Data(\'name\')`');
         }
+        if (nameHash[name]) {
+            console.warn('duplicate name \'' + name + '\' when new Data. please consider change a name;');
+        }
+        nameHash[name] = this;
+        this._hookListeners = {};
+        this._eventCache = {};
+        this.name = name;
+        this.defaultData = defaultData || {};
+        // there is a __reset reducer that clear the data.
+        this._reducerArr = [defineProperty({}, this.getActionType('__reset'), function (state) {
+            return defaultData;
+        })];
+        if (Data._task.length) {
+            Data._task = Data._task.filter(function (_) {
+                return !_();
+            });
+        }
+        clearTimeout(checkTimer);
+        checkTimer = setTimeout(checkListen, 8000);
     }
-    this._reducerArr.push(defineProperty({}, type, reducerFunc));
-    return this;
+
+    createClass(Data, [{
+        key: 'getDispatch',
+        value: function getDispatch(eventName) {
+            if (this.storeDispatch) return this.storeDispatch;
+            if (!this.globaleStore) {
+                console.error('call ' + this.name + '.dispatch(\'' + eventName + '\') error. maybe you don\'t specified the \'getStore\' when init, check it.');
+                return emptyFunc;
+            }
+            this.storeDispatch = this.globaleStore().dispatch;
+            return this.storeDispatch;
+        }
+    }, {
+        key: 'listen',
+        value: function listen(eventName, config) {
+            var self = this;
+            if (this._eventCache[eventName]) {
+                console.warn('add event `' + eventName + '` already exist, ignore*****');
+                return this;
+            }
+            config = config || {};
+            var actionGen = config.action;
+            var reducerMap = config.reducer;
+
+            var ACTION_TYPE = this.getActionType(eventName);
+            // create the real action
+            var _action = actionGen ? actionGen(ACTION_TYPE) : function (data) {
+                return { type: ACTION_TYPE, data: data };
+            };
+
+            // create the real reducer. if config.reducer is undefined, means this action will not change the state, so reducer is needless.
+            reducerMap && this._reducerArr.push(reducerMap(ACTION_TYPE));
+
+            this._eventCache[eventName] = _action;
+            return this;
+        }
+    }, {
+        key: 'asifReducer',
+        value: function asifReducer() {
+            var _this = this;
+
+            var self = this;
+            var reducer = function reducer(state, action) {
+                return _this._reducer(state, action);
+            };
+            reducer.dispatch = dispatchFunc.bind(this);
+            reducer.reset = resetFunc.bind(this);
+            reducer._data = this;
+            return reducer;
+        }
+    }, {
+        key: 'addReducer',
+        value: function addReducer(actionType, reducerFunc) {
+            this._reducerArr.push(defineProperty({}, actionType, reducerFunc));
+            return this;
+        }
+    }, {
+        key: 'listenOther',
+        value: function listenOther(type, cb) {
+            var _this2 = this;
+
+            var otherStoreName = type.split('.')[0];
+            if (otherStoreName) {
+                var task = function task() {
+                    var otherStore = Data._getStore(otherStoreName);
+                    if (otherStore) {
+                        !otherStore._hookListeners[type] && (otherStore._hookListeners[type] = []);
+                        otherStore._hookListeners[type].push({
+                            getDispatch: function getDispatch(_) {
+                                return function (action) {
+                                    return cb(action, _this2.globaleStore().getState());
+                                };
+                            },
+                            from: _this2.name
+                        });
+                        return true;
+                    } else {
+                        return false;
+                    }
+                };
+                task.from = this.name;
+                task.to = otherStoreName;
+                task.type = type;
+                if (!task()) {
+                    Data._task.push(task);
+                }
+            }
+            // this._reducerArr.push({
+            //     [type]: reducerFunc
+            // })
+            return this;
+        }
+    }, {
+        key: 'getActionType',
+        value: function getActionType(eventName) {
+            return this.name + '.' + eventName;
+        }
+    }, {
+        key: 'init',
+        value: function init(getStore) {
+            if (!getStore) {
+                console.error('fk-action-type::' + this.name + ' need a \'getStore\' method when init. check your parameter when call ' + this.name + '.init().');
+                return;
+            }
+            this.globaleStore = getStore;
+            var reducers = this._reducerArr;
+            var reducerConfig = Object.assign.apply(Object, [{}].concat(toConsumableArray(reducers)));
+            this._reducer = reducerGen(reducerConfig, this.defaultData);
+        }
+    }]);
+    return Data;
+}();
+
+Data$1._task = [];
+
+Data$1._getStore = function (name) {
+    return nameHash[name];
 };
 
-Data$1.prototype.getActionType = function (eventName) {
-    return this.name + '.' + eventName;
+Data$1.staticCheck = function (value) {
+    Data$1._staticCheckUselessListen = value;
 };
 
-Data$1.prototype.init = function (getStore) {
-    if (!getStore) {
-        console.error('fk-action-type::' + this.name + ' need a \'getStore\' method when init. check your parameter when call ' + this.name + '.init().');
-        return;
-    }
-    this.globaleStore = getStore;
-    var reducers = this._reducerArr;
-    var reducerConfig = Object.assign.apply(Object, [{}].concat(toConsumableArray(reducers)));
-    this._reducer = reducerGen(reducerConfig, this.defaultData);
+var _initialiseProps = function _initialiseProps() {
+    this.dispatch = dispatchFunc;
+    this.reset = resetFunc;
 };
 
 return Data$1;
