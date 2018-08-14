@@ -120,7 +120,19 @@ function emptyFunc() {}
 var nameHash = {};
 // global setTimeout timer that check listen event is correct.
 var checkTimer = null;
-
+var passbyAction = function passbyAction(func) {
+    return function (name) {
+        return function () {
+            // this is a passby way
+            func.apply(null, arguments);
+            // then return the real action
+            return {
+                type: name,
+                data: arguments[0]
+            };
+        };
+    };
+};
 function checkListen() {
     if (Data$1._staticCheckUselessListen !== true) return;
     if (Data$1._task.length) {
@@ -211,12 +223,23 @@ var Data$1 = function () {
             return this.storeDispatch;
         }
     }, {
+        key: 'passbyListen',
+        value: function passbyListen(eventName, func) {
+            var ACTION_TYPE = this.getActionType(eventName);
+            var _action = passbyAction(func)(ACTION_TYPE);
+            this._eventCache[eventName] = _action;
+            return this;
+        }
+    }, {
         key: 'listen',
         value: function listen(eventName, config) {
             var self = this;
             if (this._eventCache[eventName]) {
                 console.warn('add event `' + eventName + '` already exist, ignore*****');
                 return this;
+            }
+            if (typeof config == 'function') {
+                return this.passbyListen(eventName, config);
             }
             config = config || {};
             var actionGen = config.action;

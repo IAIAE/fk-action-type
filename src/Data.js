@@ -6,7 +6,17 @@ function emptyFunc() { }
 let nameHash = {}
 // global setTimeout timer that check listen event is correct.
 let checkTimer = null;
-
+const passbyAction = func => name => {
+    return function(){
+        // this is a passby way
+        func.apply(null, arguments);
+        // then return the real action
+        return {
+            type: name,
+            data: arguments[0]
+        }
+    }
+}
 function checkListen(){
     if(Data._staticCheckUselessListen!==true) return;
     if(Data._task.length){
@@ -89,12 +99,20 @@ class Data{
         this.storeDispatch = this.globaleStore().dispatch;
         return this.storeDispatch;
     }
-    
+    passbyListen(eventName, func){
+        const ACTION_TYPE = this.getActionType(eventName)
+        let _action = passbyAction(func)(ACTION_TYPE)
+        this._eventCache[eventName] = _action;
+        return this;
+    } 
     listen(eventName, config) {
         let self = this;
         if (this._eventCache[eventName]) {
             console.warn('add event `' + eventName + '` already exist, ignore*****');
             return this;
+        }
+        if(typeof config == 'function'){
+            return this.passbyListen(eventName, config);
         }
         config = config || {};
         let actionGen = config.action;

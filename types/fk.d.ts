@@ -40,8 +40,14 @@ export default class Data {
      * @param config {action: {}, reducer: {}} 这样的形式
      * @returns this 返回this自身，可以链式调用
      */
-    listen(eventName, config): Data;
+    listen(eventName:string, config?:AnyObject): Data;
 
+    /**
+     * 监听一个事件，触发的时候调用旁路函数，不会改变组件本身数据，其他组件也能监听到这个事件
+     * @param eventName 事件名称
+     * @param func 旁路函数
+     */
+    passbyListen(eventName:string, func:(...args:any[])=>void): Data;
 
     /**
      * 将这个Data对象伪装成一个reducer的样子，返回结果可以直接当做reducer用。
