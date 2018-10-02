@@ -1,7 +1,11 @@
 interface AnyObject{
     [prop: string]: any;
 }
-
+export const LogType = {
+    NAME_DUPLICATE: 1,
+    LISTEN_TYPE_DUPLICATE: 2, 
+    DISPATCH_NO_LISTEN_ACTION: 3,
+}
 export default class Data {
     static _task: Array<()=>boolean>;
     static _getStore: (name: string) => Data|null;
