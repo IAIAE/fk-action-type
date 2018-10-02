@@ -1,4 +1,5 @@
 import {reducerGen} from './reducerGen'
+import {LogType} from './index'
 
 const iden = _=>_;
 function emptyFunc() { }
@@ -50,6 +51,7 @@ function dispatchFunc(eventName, ...rest) {
     let _action = this._eventCache[eventName]
     if (!_action) {
         console.warn('no function listen event:: ' + eventName)
+        Data.__logger && data.__logger({type: LogType.DISPATCH_NO_LISTEN_ACTION, msg: 'no function listen event:: ' + eventName})
         return;
     }
     return this.getDispatch(eventName)(_action.apply(null, rest));
@@ -79,7 +81,7 @@ class Data{
         }
         if (nameHash[name]) {
             console.warn(`duplicate name '${name}' when new Data. please consider change a name;`)
-            Data.__logger && Data.__logger(`duplicate name '${name}' when new Data. please consider change a name;`)
+            Data.__logger && Data.__logger({type: LogType.NAME_DUPLICATE, msg: `duplicate name '${name}' when new Data. please consider change a name;`})
         }
         nameHash[name] = this;
         this._hookListeners = {};
@@ -118,6 +120,7 @@ class Data{
         let self = this;
         if (this._eventCache[eventName]) {
             console.warn('add event `' + eventName + '` already exist, ignore*****');
+            Data.__logger && Data.__logger({type: LogType.LISTEN_TYPE_DUPLICATE, msg: 'add event `' + eventName + '` already exist, ignore*****'})
             return this;
         }
         if(typeof config == 'function'){

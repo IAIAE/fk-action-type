@@ -12,7 +12,7 @@ export default class Data {
     /**
      * 注册一个上报函数，fk-action-type在一些console.warn的时候会调用这个函数进行上报
      */
-    static injectLogger: (loggerFunc: (str: string) => void) => void;
+    static injectLogger: (loggerFunc: (logObj: {type:string, msg: string}) => void) => void;
     name: string;
     globaleStore: ReduxStore;
     _hookListeners: {

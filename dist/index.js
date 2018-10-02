@@ -1,8 +1,8 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.FkActionType = factory());
-}(this, (function () { 'use strict';
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+	typeof define === 'function' && define.amd ? define(['exports'], factory) :
+	(factory((global.FkActionType = global.FkActionType || {})));
+}(this, (function (exports) { 'use strict';
 
 /**
  * usage: reducerGen({
@@ -170,6 +170,7 @@ function dispatchFunc(eventName) {
     var _action = this._eventCache[eventName];
     if (!_action) {
         console.warn('no function listen event:: ' + eventName);
+        Data$1.__logger && data.__logger({ type: LogType.DISPATCH_NO_LISTEN_ACTION, msg: 'no function listen event:: ' + eventName });
         return;
     }
 
@@ -194,7 +195,7 @@ var Data$1 = function () {
         }
         if (nameHash[name]) {
             console.warn('duplicate name \'' + name + '\' when new Data. please consider change a name;');
-            Data.__logger && Data.__logger('duplicate name \'' + name + '\' when new Data. please consider change a name;');
+            Data.__logger && Data.__logger({ type: LogType.NAME_DUPLICATE, msg: 'duplicate name \'' + name + '\' when new Data. please consider change a name;' });
         }
         nameHash[name] = this;
         this._hookListeners = {};
@@ -239,6 +240,7 @@ var Data$1 = function () {
             var self = this;
             if (this._eventCache[eventName]) {
                 console.warn('add event `' + eventName + '` already exist, ignore*****');
+                Data.__logger && Data.__logger({ type: LogType.LISTEN_TYPE_DUPLICATE, msg: 'add event `' + eventName + '` already exist, ignore*****' });
                 return this;
             }
             if (typeof config == 'function') {
@@ -360,6 +362,15 @@ var _initialiseProps = function _initialiseProps() {
     this.reset = resetFunc;
 };
 
-return Data$1;
+var LogType = {
+    NAME_DUPLICATE: 1,
+    LISTEN_TYPE_DUPLICATE: 2,
+    DISPATCH_NO_LISTEN_ACTION: 3
+};
+
+exports['default'] = Data$1;
+exports.LogType = LogType;
+
+Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
