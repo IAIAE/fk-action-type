@@ -1,10 +1,10 @@
 interface AnyObject{
     [prop: string]: any;
 }
-export const LogType = {
-    NAME_DUPLICATE: 1,
-    LISTEN_TYPE_DUPLICATE: 2, 
-    DISPATCH_NO_LISTEN_ACTION: 3,
+export enum LogType {
+    NAME_DUPLICATE= 1,
+    LISTEN_TYPE_DUPLICATE= 2, 
+    DISPATCH_NO_LISTEN_ACTION= 3,
 }
 export default class Data {
     static _task: Array<()=>boolean>;
@@ -16,7 +16,7 @@ export default class Data {
     /**
      * 注册一个上报函数，fk-action-type在一些console.warn的时候会调用这个函数进行上报
      */
-    static injectLogger: (loggerFunc: (logObj: {type:string, msg: string}) => void) => void;
+    static injectLogger: (loggerFunc: (logObj: {type:LogType, msg: string}) => void) => void;
     name: string;
     globaleStore: ReduxStore;
     _hookListeners: {
