@@ -42,6 +42,8 @@ function checkListen(){
 function isExistEvent(data, hookName, actionType){
     if(data._eventCache[actionType]) return true;
     if(data._reducerArr.some(obj=>Object.keys(obj).some(key=>key==hookName))) return true;
+    // 不判断这些cgi的回调事件是否有对应reducer处理 todo: 更好的处理机制
+    if(/(_success|_fail|_fetching)/.test(hookName)) return true;
     return false;
 }
 function dispatchFunc(eventName, ...rest) {
@@ -64,13 +66,20 @@ class Data{
     static staticCheck = function(value){
         Data._staticCheckUselessListen = value;
     }
-    
+    static injectLogger = function(log){
+        if(typeof log == 'function'){
+            Data.__logger = log;
+        }else{
+            console.warn('the logger must be a function! check the Data.injectLogger function you use.')
+        }
+    }
     constructor(name, defaultData){
         if (!name) {
             throw new Error('a Data must has a name, please use `new Data(\'name\')`');
         }
         if (nameHash[name]) {
             console.warn(`duplicate name '${name}' when new Data. please consider change a name;`)
+            Data.__logger && Data.__logger(`duplicate name '${name}' when new Data. please consider change a name;`)
         }
         nameHash[name] = this;
         this._hookListeners = {};

@@ -162,6 +162,8 @@ function isExistEvent(data, hookName, actionType) {
             return key == hookName;
         });
     })) return true;
+    // 不判断这些cgi的回调事件是否有对应reducer处理 todo: 更好的处理机制
+    if (/(_success|_fail|_fetching)/.test(hookName)) return true;
     return false;
 }
 function dispatchFunc(eventName) {
@@ -192,6 +194,7 @@ var Data$1 = function () {
         }
         if (nameHash[name]) {
             console.warn('duplicate name \'' + name + '\' when new Data. please consider change a name;');
+            Data.__logger && Data.__logger('duplicate name \'' + name + '\' when new Data. please consider change a name;');
         }
         nameHash[name] = this;
         this._hookListeners = {};
@@ -342,6 +345,14 @@ Data$1._getStore = function (name) {
 
 Data$1.staticCheck = function (value) {
     Data$1._staticCheckUselessListen = value;
+};
+
+Data$1.injectLogger = function (log) {
+    if (typeof log == 'function') {
+        Data$1.__logger = log;
+    } else {
+        console.warn('the logger must be a function! check the Data.injectLogger function you use.');
+    }
 };
 
 var _initialiseProps = function _initialiseProps() {

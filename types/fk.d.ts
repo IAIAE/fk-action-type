@@ -5,8 +5,14 @@ interface AnyObject{
 export default class Data {
     static _task: Array<()=>boolean>;
     static _getStore: (name: string) => Data|null;
+    /**
+     * 是否进行静态引用检查，如果是，将检查所有listenOther的依赖是否存在
+     */
     static staticCheck: (value: boolean) => void;
-
+    /**
+     * 注册一个上报函数，fk-action-type在一些console.warn的时候会调用这个函数进行上报
+     */
+    static injectLogger: (loggerFunc: (str: string) => void) => void;
     name: string;
     globaleStore: ReduxStore;
     _hookListeners: {
