@@ -170,7 +170,7 @@ function dispatchFunc(eventName) {
     var _action = this._eventCache[eventName];
     if (!_action) {
         console.warn('no function listen event:: ' + eventName);
-        Data$1.__logger && data.__logger({ type: LogType.DISPATCH_NO_LISTEN_ACTION, msg: 'no function listen event:: ' + eventName });
+        Data$1.__logger && Data$1.__logger({ type: LogType.DISPATCH_NO_LISTEN_ACTION, msg: 'no function listen event:: ' + eventName });
         return;
     }
 
