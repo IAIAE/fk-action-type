@@ -51,7 +51,7 @@ function dispatchFunc(eventName, ...rest) {
     let _action = this._eventCache[eventName]
     if (!_action) {
         console.warn('no function listen event:: ' + eventName)
-        Data.__logger && data.__logger({type: LogType.DISPATCH_NO_LISTEN_ACTION, msg: 'no function listen event:: ' + eventName})
+        Data.__logger && Data.__logger({type: LogType.DISPATCH_NO_LISTEN_ACTION, msg: 'no function listen event:: ' + eventName})
         return;
     }
     return this.getDispatch(eventName)(_action.apply(null, rest));
@@ -115,7 +115,7 @@ class Data{
         let _action = passbyAction(func)(ACTION_TYPE)
         this._eventCache[eventName] = _action;
         return this;
-    } 
+    }
     listen(eventName, config) {
         let self = this;
         if (this._eventCache[eventName]) {
@@ -129,14 +129,14 @@ class Data{
         config = config || {};
         let actionGen = config.action;
         let reducerMap = config.reducer;
-    
+
         const ACTION_TYPE = this.getActionType(eventName);
         // create the real action
         let _action = actionGen ? actionGen(ACTION_TYPE) : (data) => ({ type: ACTION_TYPE, data })
-    
+
         // create the real reducer. if config.reducer is undefined, means this action will not change the state, so reducer is needless.
         reducerMap && this._reducerArr.push(reducerMap(ACTION_TYPE))
-    
+
         this._eventCache[eventName] = _action;
         return this;
     }
